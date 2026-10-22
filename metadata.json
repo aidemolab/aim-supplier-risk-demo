@@ -1,0 +1,6 @@
+{
+  "name": "Supplier Risk Scoring Dashboard",
+  "description": "Supplier risk scoring and procurement analysis dashboard with interactive filters, health metrics, and automated recommendations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
