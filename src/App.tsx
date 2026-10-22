@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDemoRows, type Row } from './demoApi';
+import { AnimatedNumber, ResultTile, ScenarioPanel, SliderField, WeightSliders, type Preset } from './Scenario';
 import { DemoNote, DemoToolbar, RecordModal, ConfirmModal, OwnRowActions, OwnTag, type FieldDef } from './DemoUI';
 
 // Define structures for the supplier application
@@ -158,6 +159,9 @@ interface Deductions {
   expiry: number;
   dependency: number;
   geopolitical: number;
+  esg: number; // scenario only
+  cyber: number; // scenario only
+  pressure: number; // scenario only: currency and tariff cost pressure
 }
 
 // Recommended Action helper mapping
@@ -218,8 +222,31 @@ const RISK_SUMMARIES: Record<string, string> = {
   S005: "Flawless partner with 99% delivery, 9.5 quality, and zero risk flags."
 };
 
+// ---- What-if scenario (view only; never saved) ----
+// Weights scale groups of the existing deductions: Financial = contract expiry + dependency (+ cost pressure),
+// Operational = delivery + quality + incidents, Geopolitical = the geopolitical penalty. ESG and Cyber are
+// illustrative rule-based risks from country and category. At the standard weights with no shocks the
+// original scoring is used unchanged.
+interface Scn { weights: number[]; fx: number; delay: number; tariff: number }
+const DEFAULT_WEIGHTS = [30, 60, 10, 0, 0]; // Financial, Operational, Geopolitical, ESG, Cyber
+const DEFAULT_SCN: Scn = { weights: DEFAULT_WEIGHTS, fx: 0, delay: 0, tariff: 0 };
+const isDefaultScn = (c: Scn) => c.fx === 0 && c.delay === 0 && c.tariff === 0 && c.weights.every((w, i) => w === DEFAULT_WEIGHTS[i]);
+const DELAY_OTD_PER_DAY = 0.6; // each day of delay lowers on-time delivery by 0.6 points
+
+const SCN_PRESETS: (Preset & { scn: Scn })[] = [
+  { id: 'supply-shock', label: 'Supply shock', hint: '20-day delays and a 5% currency move', scn: { weights: [25, 55, 10, 5, 5], fx: 5, delay: 20, tariff: 0 } },
+  { id: 'tariff-war', label: 'Tariff war', hint: '20% tariffs, a 10% currency move and more weight on geopolitics', scn: { weights: [30, 35, 25, 5, 5], fx: 10, delay: 5, tariff: 20 } },
+  { id: 'esg-cyber', label: 'ESG and cyber focus', hint: 'Weights ESG and cyber risk as much as finance', scn: { weights: [20, 30, 10, 20, 20], fx: 0, delay: 0, tariff: 0 } },
+];
+
+const COUNTRY_ESG: Record<string, number> = { uk: 15, 'united kingdom': 15, germany: 15, taiwan: 35, china: 65, bangladesh: 75 };
+const CATEGORY_CYBER: Record<string, number> = { electronics: 55, logistics: 60, 'print and marketing': 35, packaging: 20, clothing: 25, 'raw materials': 20 };
+const isUk = (country: string) => /^(uk|united kingdom|england|scotland|wales|great britain)$/i.test(country.trim());
+
 // Compute individual supplier score & deductions
-function runCalculations(supplier: Supplier): { score: number; deductions: Deductions; category: 'GREEN' | 'YELLOW' | 'RED' } {
+function runCalculations(supplier: Supplier, scn?: Scn): { score: number; deductions: Deductions; category: 'GREEN' | 'YELLOW' | 'RED'; delivery: number; spend: number } {
+  const baseSpend = supplier.spend;
+  if (scn && scn.delay > 0) supplier = { ...supplier, delivery: Math.max(0, Math.round((supplier.delivery - scn.delay * DELAY_OTD_PER_DAY) * 10) / 10) };
   let score = 100;
   const deductions: Deductions = {
     delivery: 0,
@@ -228,6 +255,9 @@ function runCalculations(supplier: Supplier): { score: number; deductions: Deduc
     expiry: 0,
     dependency: 0,
     geopolitical: 0,
+    esg: 0,
+    cyber: 0,
+    pressure: 0,
   };
 
   // 1. Delivery
@@ -295,6 +325,28 @@ function runCalculations(supplier: Supplier): { score: number; deductions: Deduc
     score -= 8;
   }
 
+  // What-if scenario: weights, shocks (view only)
+  let spend = baseSpend;
+  if (scn && !isDefaultScn(scn)) {
+    const [wF, wO, wG, wE, wC] = scn.weights;
+    const nonUk = !isUk(supplier.country);
+    const r1 = (n: number) => Math.round(n * 10) / 10;
+    const esgRisk = Math.min(100, (COUNTRY_ESG[supplier.country.trim().toLowerCase()] ?? 40) + supplier.incidents * 4 + (supplier.quality < 7 ? 10 : 0));
+    const cyberRisk = Math.min(100, (CATEGORY_CYBER[supplier.category.trim().toLowerCase()] ?? 40) + (supplier.dependencyRisk === 'High' ? 10 : 0));
+    const mF = wF / DEFAULT_WEIGHTS[0], mO = wO / DEFAULT_WEIGHTS[1], mG = wG / DEFAULT_WEIGHTS[2];
+    deductions.pressure = r1((nonUk ? scn.fx * 0.5 + scn.tariff * 0.4 : 0) * mF);
+    deductions.expiry = r1(deductions.expiry * mF);
+    deductions.dependency = r1(deductions.dependency * mF);
+    deductions.delivery = r1(deductions.delivery * mO);
+    deductions.quality = r1(deductions.quality * mO);
+    deductions.incidents = r1(deductions.incidents * mO);
+    deductions.geopolitical = r1(deductions.geopolitical * mG);
+    deductions.esg = r1((esgRisk * wE) / 100);
+    deductions.cyber = r1((cyberRisk * wC) / 100);
+    score = 100 - (deductions.pressure + deductions.expiry + deductions.dependency + deductions.delivery + deductions.quality + deductions.incidents + deductions.geopolitical + deductions.esg + deductions.cyber);
+    if (nonUk) spend = Math.round(baseSpend * (1 + (scn.fx + scn.tariff) / 100));
+  }
+
   // Cap / Floor
   score = Math.max(10, Math.min(100, score));
   const finalScore = Math.round(score);
@@ -326,7 +378,9 @@ function runCalculations(supplier: Supplier): { score: number; deductions: Deduc
   return {
     score: finalScore,
     deductions,
-    category
+    category,
+    delivery: supplier.delivery,
+    spend
   };
 }
 
@@ -372,7 +426,7 @@ function actionFor(s: Supplier, category: 'GREEN' | 'YELLOW' | 'RED', score: num
 }
 
 const DEDUCTION_LABELS: Record<string, string> = {
-  delivery: 'on-time delivery', quality: 'quality', incidents: 'incident history', expiry: 'contract expiry', dependency: 'dependency risk', geopolitical: 'geopolitical risk',
+  delivery: 'on-time delivery', quality: 'quality', incidents: 'incident history', expiry: 'contract expiry', dependency: 'dependency risk', geopolitical: 'geopolitical risk', esg: 'ESG risk', cyber: 'cyber risk', pressure: 'currency and tariff cost pressure',
 };
 
 function advisorFor(s: Supplier, calc: { score: number; deductions: Deductions; category: 'GREEN' | 'YELLOW' | 'RED' }, action: string): string {
@@ -395,6 +449,39 @@ const SUPPLIER_FIELDS: FieldDef[] = [
   { key: 'notes', label: 'Notes (optional)', type: 'textarea', maxLength: 400, required: false },
 ];
 
+// Scores, ranks and texts for every supplier under a scenario (or the original scoring when scn is undefined).
+function buildSuppliers(rows: Row[], scn?: Scn) {
+  const active = Boolean(scn);
+  const computed = rows.map(supplierFromRow).map(s => {
+    const calc = runCalculations(s, scn);
+    const shocked = { ...s, delivery: calc.delivery };
+    const action = s.seedKey && !active ? getAction(s.seedKey) : actionFor(shocked, calc.category, calc.score);
+    return {
+      ...s,
+      supplierCategory: s.category,
+      baseSpend: s.spend,
+      spend: calc.spend,
+      delivery: calc.delivery,
+      healthScore: calc.score,
+      deductions: calc.deductions,
+      category: calc.category,
+      action,
+      aiAdvisor: s.seedKey && !active ? (AI_RECOMMENDATIONS[s.seedKey] || "No strategic summary available.") : advisorFor(shocked, calc, action),
+      riskSummary: s.seedKey && !active
+        ? (RISK_SUMMARIES[s.seedKey] || "")
+        : `${calc.score}/100: ${calc.delivery}% delivery, ${s.quality} quality, ${s.incidents} incident${s.incidents === 1 ? '' : 's'}, ${s.contractExpiry} months left on the contract.`
+    };
+  });
+  // Rank rule: Category (Green first, Yellow second, Red last), then score (highest first), then incidents (fewest first)
+  const order = { GREEN: 1, YELLOW: 2, RED: 3 };
+  const sorted = [...computed].sort((a, b) => {
+    if (order[a.category] !== order[b.category]) return order[a.category] - order[b.category];
+    if (b.healthScore !== a.healthScore) return b.healthScore - a.healthScore;
+    return a.incidents - b.incidents;
+  });
+  return sorted.map((s, idx) => ({ ...s, rank: idx + 1 }));
+}
+
 type FormState = { mode: 'add' } | { mode: 'edit'; supplier: LiveSupplier } | { mode: 'delete'; supplier: LiveSupplier } | null;
 
 export default function App() {
@@ -403,44 +490,20 @@ export default function App() {
   const demo = useDemoRows('suppliers', FALLBACK_ROWS);
   const [form, setForm] = useState<FormState>(null);
 
-  // Dynamic ranking and computation
-  const suppliers = useMemo(() => {
-    // Calculate details first
-    const computed = demo.rows.map(supplierFromRow).map(s => {
-      const calc = runCalculations(s);
-      const action = s.seedKey ? getAction(s.seedKey) : actionFor(s, calc.category, calc.score);
-      return {
-        ...s,
-        supplierCategory: s.category,
-        healthScore: calc.score,
-        deductions: calc.deductions,
-        category: calc.category,
-        action,
-        aiAdvisor: s.seedKey ? (AI_RECOMMENDATIONS[s.seedKey] || "No strategic summary available.") : advisorFor(s, calc, action),
-        riskSummary: s.seedKey
-          ? (RISK_SUMMARIES[s.seedKey] || "")
-          : `${calc.score}/100: ${s.delivery}% delivery, ${s.quality} quality, ${s.incidents} incident${s.incidents === 1 ? '' : 's'}, ${s.contractExpiry} months left on the contract.`
-      };
-    });
-
-    // Rank rule: Category (Green first, Yellow second, Red last), then score (highest first), then incidents (fewest first)
-    const sorted = [...computed].sort((a, b) => {
-      const order = { GREEN: 1, YELLOW: 2, RED: 3 };
-      if (order[a.category] !== order[b.category]) {
-        return order[a.category] - order[b.category];
-      }
-      if (b.healthScore !== a.healthScore) {
-        return b.healthScore - a.healthScore;
-      }
-      return a.incidents - b.incidents;
-    });
-
-    // Assign rank 1-7
-    return sorted.map((s, idx) => ({
-      ...s,
-      rank: idx + 1
-    }));
-  }, [demo.rows]);
+  // What-if scenario state (view only)
+  const [scn, setScn] = useState<Scn>(DEFAULT_SCN);
+  const [preset, setPreset] = useState<string | null>(null);
+  const scnActive = !isDefaultScn(scn);
+  const suppliers = useMemo(() => buildSuppliers(demo.rows, scnActive ? scn : undefined), [demo.rows, scn, scnActive]);
+  const baseline = useMemo(() => buildSuppliers(demo.rows), [demo.rows]);
+  const baseRank = useMemo(() => new Map(baseline.map((b) => [b.id, b.rank])), [baseline]);
+  const atRiskSpend = suppliers.filter((x) => x.category === 'RED').reduce((a, x) => a + x.spend, 0);
+  const baseAtRisk = baseline.filter((x) => x.category === 'RED').reduce((a, x) => a + x.spend, 0);
+  const extraCost = suppliers.reduce((a, x) => a + (x.spend - x.baseSpend), 0);
+  const redNow = suppliers.filter((x) => x.category === 'RED').length;
+  const redBase = baseline.filter((x) => x.category === 'RED').length;
+  const movedCount = suppliers.filter((x) => baseRank.get(x.id) !== x.rank).length;
+  const setScenario = (next: Scn, presetId: string | null = null) => { setScn(next); setPreset(presetId); };
 
   // Filtered suppliers for table display
   const filteredSuppliers = useMemo(() => {
@@ -503,6 +566,34 @@ export default function App() {
       <DemoNote status={demo.status} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 space-y-8" id="dashboard-main">
+        <ScenarioPanel
+          title="Stress-test your supply chain"
+          subtitle="Choose how much each kind of risk matters, then hit the portfolio with a currency, delay or tariff shock. Scores, tiers and ranks recompute instantly."
+          presets={SCN_PRESETS} activePreset={preset}
+          onPreset={(id) => { const p = SCN_PRESETS.find((x) => x.id === id); if (p) setScenario(p.scn, id); }}
+          onReset={() => setScenario(DEFAULT_SCN)} changed={scnActive}
+          note="How it works: weights scale groups of the existing score deductions (Financial = contract and dependency, Operational = delivery, quality and incidents). ESG and cyber are illustrative rule-based risks from country and category. Each day of delay lowers on-time delivery by 0.6 points; currency and tariff moves add cost pressure to non-UK suppliers. All supplier data is fictional."
+          results={<>
+            <ResultTile testId="tile-atrisk" label="Spend at risk (Red tier)" value={atRiskSpend} format={formatGBP} delta={atRiskSpend - baseAtRisk} goodWhen="down" tone="red" />
+            <ResultTile testId="tile-extra" label="Extra cost from currency and tariffs" value={extraCost} format={formatGBP} tone="amber" />
+            <ResultTile testId="tile-red" label="Red-tier suppliers" value={redNow} format={(n) => String(Math.round(n))} delta={redNow - redBase} deltaFormat={(n) => String(Math.round(n))} goodWhen="down" tone="red" />
+            <ResultTile testId="tile-moved" label="Suppliers that changed rank" value={movedCount} format={(n) => String(Math.round(n))} tone="navy" />
+          </>}
+        >
+          <div className="scn-body two">
+            <div className="scn-group">
+              <h3>Risk weighting</h3>
+              <WeightSliders idPrefix="w" names={['Financial', 'Operational', 'Geopolitical', 'ESG', 'Cyber']} values={scn.weights} onChange={(w) => setScenario({ ...scn, weights: w })} />
+            </div>
+            <div className="scn-group">
+              <h3>Shocks</h3>
+              <SliderField id="fx" label="Currency shock (pound weakens)" value={scn.fx} min={0} max={20} step={1} format={(v) => `${v}%`} onChange={(v) => setScenario({ ...scn, fx: v })} hint="Raises the cost of non-UK suppliers." />
+              <SliderField id="delay" label="Delivery delay" value={scn.delay} min={0} max={30} step={1} format={(v) => `${v} days`} onChange={(v) => setScenario({ ...scn, delay: v })} hint="Lowers on-time delivery for every supplier." />
+              <SliderField id="tariff" label="Tariff increase" value={scn.tariff} min={0} max={25} step={1} format={(v) => `${v}%`} onChange={(v) => setScenario({ ...scn, tariff: v })} hint="Raises the cost of non-UK suppliers." />
+            </div>
+          </div>
+        </ScenarioPanel>
+
         {/* KPI Row */}
         <section className="grid grid-cols-2 lg:grid-cols-5 gap-4" id="kpi-cards">
           <div className="bg-[#f4f6f9] border border-[#e2e8f0] p-5 rounded-xl flex flex-col justify-between" id="kpi-total-suppliers">
@@ -511,7 +602,7 @@ export default function App() {
               <Building2 className="h-4 w-4 text-[#6b7280]" />
             </div>
             <div>
-              <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#0B1F33]">{stats.totalCount}</span>
+              <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#0B1F33]"><AnimatedNumber value={stats.totalCount} /></span>
               <span className="block text-[11px] text-[#6b7280] mt-1">Vendors in the sample portfolio</span>
             </div>
           </div>
@@ -523,7 +614,7 @@ export default function App() {
             </div>
             <div>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#166534]">{stats.greenCount}</span>
+                <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#166534]"><AnimatedNumber value={stats.greenCount} /></span>
                 <span className="text-xs text-[#166534] font-medium bg-[#dcfce7] px-1.5 py-0.5 rounded">Stable</span>
               </div>
               <span className="block text-[11px] text-[#6b7280] mt-1">Healthy performance profiles</span>
@@ -537,7 +628,7 @@ export default function App() {
             </div>
             <div>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#854d0e]">{stats.yellowCount}</span>
+                <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#854d0e]"><AnimatedNumber value={stats.yellowCount} /></span>
                 <span className="text-xs text-[#854d0e] font-medium bg-[#fef9c3] px-1.5 py-0.5 rounded">Alert</span>
               </div>
               <span className="block text-[11px] text-[#6b7280] mt-1">Moderate risk / watch closely</span>
@@ -551,7 +642,7 @@ export default function App() {
             </div>
             <div>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#991b1b]">{stats.redCount}</span>
+                <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#991b1b]"><AnimatedNumber value={stats.redCount} /></span>
                 <span className="text-xs text-[#991b1b] font-medium bg-[#fee2e2] px-1.5 py-0.5 rounded">Urgent</span>
               </div>
               <span className="block text-[11px] text-[#6b7280] mt-1">Immediate intervention needed</span>
@@ -564,7 +655,7 @@ export default function App() {
               <DollarSign className="h-4 w-4 text-[#2563EB]" />
             </div>
             <div>
-              <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#0B1F33]">{formatGBP(stats.totalSpend)}</span>
+              <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#0B1F33]"><AnimatedNumber value={stats.totalSpend} format={formatGBP} /></span>
               <span className="block text-[11px] text-[#6b7280] mt-1">Portfolio aggregate value</span>
             </div>
           </div>
@@ -703,7 +794,7 @@ export default function App() {
 
                   return (
                     <Fragment key={supplier.id}>
-                      <tr 
+                      <motion.tr layout="position" transition={{ type: 'spring', stiffness: 300, damping: 32 }}
                         key={supplier.id}
                         id={`row-${supplier.id}`}
                         onClick={() => handleRowClick(supplier.id)}
@@ -719,6 +810,9 @@ export default function App() {
                           }`}>
                             {supplier.rank}
                           </span>
+                          {scnActive && baseRank.get(supplier.id) !== undefined && baseRank.get(supplier.id) !== supplier.rank && (
+                            <span className={`rank-chip ${supplier.rank < (baseRank.get(supplier.id) ?? 0) ? 'up' : 'down'}`} title="Rank change versus the baseline">{supplier.rank < (baseRank.get(supplier.id) ?? 0) ? '▲' : '▼'}{Math.abs(supplier.rank - (baseRank.get(supplier.id) ?? 0))}</span>
+                          )}
                         </td>
                         {/* Name */}
                         <td className="py-4 px-4 font-semibold text-sm text-[#0B1F33]">
@@ -733,7 +827,7 @@ export default function App() {
                         </td>
                         {/* Score Badge */}
                         <td className="py-4 px-4 text-center">
-                          <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClasses}`}>
+                          <span className={`tier-badge inline-flex px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClasses}`}>
                             {supplier.category}
                           </span>
                         </td>
@@ -745,12 +839,12 @@ export default function App() {
                         <td className="py-4 px-4">
                           <div className="flex flex-col gap-1.5 justify-center max-w-[120px]">
                             <div className="flex justify-between items-center text-xs font-bold">
-                              <span>{supplier.healthScore}</span>
+                              <span><AnimatedNumber value={supplier.healthScore} duration={0.5} /></span>
                               <span className="text-[10px] text-[#6b7280] font-normal">/ 100</span>
                             </div>
                             <div className="w-full bg-[#e2e8f0] h-1.5 rounded-full overflow-hidden">
                               <div 
-                                className={`h-full rounded-full transition-all duration-500 ${
+                                className={`tier-bar h-full rounded-full ${
                                   isGreen ? 'bg-green-600' : isYellow ? 'bg-amber-500' : 'bg-red-600'
                                 }`}
                                 style={{ width: `${supplier.healthScore}%` }}
@@ -804,7 +898,7 @@ export default function App() {
                             <ChevronDown className="h-4 w-4 text-[#6b7280]" />
                           )}
                         </td>
-                      </tr>
+                      </motion.tr>
 
                       {/* Expandable Detail Panel */}
                       <AnimatePresence initial={false}>
@@ -890,6 +984,24 @@ export default function App() {
                                         <div className="flex justify-between text-slate-600">
                                           <span>Geopolitical Penalty</span>
                                           <span className="text-red-600">-{supplier.deductions.geopolitical}</span>
+                                        </div>
+                                      )}
+                                      {supplier.deductions.esg > 0 && (
+                                        <div className="flex justify-between text-slate-600">
+                                          <span>ESG risk (scenario)</span>
+                                          <span className="text-red-600">-{supplier.deductions.esg}</span>
+                                        </div>
+                                      )}
+                                      {supplier.deductions.cyber > 0 && (
+                                        <div className="flex justify-between text-slate-600">
+                                          <span>Cyber risk (scenario)</span>
+                                          <span className="text-red-600">-{supplier.deductions.cyber}</span>
+                                        </div>
+                                      )}
+                                      {supplier.deductions.pressure > 0 && (
+                                        <div className="flex justify-between text-slate-600">
+                                          <span>Currency and tariff pressure (scenario)</span>
+                                          <span className="text-red-600">-{supplier.deductions.pressure}</span>
                                         </div>
                                       )}
                                       <div className="border-t border-[#e2e8f0] pt-2 mt-2 flex justify-between font-bold text-sm text-[#0B1F33]">
