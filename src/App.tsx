@@ -554,12 +554,6 @@ export default function App() {
             <h1 className="text-2xl md:text-3xl font-bold text-[#0B1F33] tracking-tight">Supplier Risk Scoring Dashboard</h1>
             <p className="text-sm text-[#6b7280] mt-0.5">Rule-based supplier performance analysis and procurement risk assessment tool</p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#f4f6f9] text-[#0B1F33] border border-[#e2e8f0]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#166534]"></span>
-              Live demo · fictional data
-            </span>
-          </div>
         </div>
       </header>
 
