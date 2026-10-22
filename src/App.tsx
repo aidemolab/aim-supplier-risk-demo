@@ -404,22 +404,22 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-[#1a1d27] font-sans antialiased selection:bg-[#3b82f6]/10 selection:text-[#3b82f6]">
+    <div className="bg-white text-[#0B1F33] font-sans antialiased selection:bg-[#2563EB]/10 selection:text-[#2563EB]">
       {/* Top Professional Header Bar */}
       <header className="border-b border-[#e2e8f0] py-6 px-6 md:px-8 bg-white" id="dashboard-header">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <Activity className="h-5 w-5 text-[#3b82f6]" />
-              <span className="text-xs font-semibold tracking-wider text-[#3b82f6] uppercase">Procurement Analytics Suite</span>
+              <Activity className="h-5 w-5 text-[#2563EB]" />
+              <span className="text-xs font-semibold tracking-wider text-[#2563EB] uppercase">Procurement Analytics Suite</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-[#1a1d27] tracking-tight">Supplier Risk Scoring Dashboard</h1>
-            <p className="text-sm text-[#6b7280] mt-0.5">AI-powered supplier performance analysis and procurement risk assessment tool</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-[#0B1F33] tracking-tight">Supplier Risk Scoring Dashboard</h1>
+            <p className="text-sm text-[#6b7280] mt-0.5">Rule-based supplier performance analysis and procurement risk assessment tool</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#f4f6f9] text-[#1a1d27] border border-[#e2e8f0]">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#f4f6f9] text-[#0B1F33] border border-[#e2e8f0]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#166534]"></span>
-              Live Database Active
+              Illustrative data
             </span>
           </div>
         </div>
@@ -434,8 +434,8 @@ export default function App() {
               <Building2 className="h-4 w-4 text-[#6b7280]" />
             </div>
             <div>
-              <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#1a1d27]">{stats.totalCount}</span>
-              <span className="block text-[11px] text-[#6b7280] mt-1">Portfolio active vendors</span>
+              <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#0B1F33]">{stats.totalCount}</span>
+              <span className="block text-[11px] text-[#6b7280] mt-1">Vendors in the sample portfolio</span>
             </div>
           </div>
 
@@ -484,10 +484,10 @@ export default function App() {
           <div className="bg-[#f4f6f9] border border-[#e2e8f0] col-span-2 lg:col-span-1 p-5 rounded-xl flex flex-col justify-between" id="kpi-spend">
             <div className="flex justify-between items-center text-[#6b7280] mb-2">
               <span className="text-[11px] font-semibold uppercase tracking-wider">Total Annual Spend</span>
-              <DollarSign className="h-4 w-4 text-[#3b82f6]" />
+              <DollarSign className="h-4 w-4 text-[#2563EB]" />
             </div>
             <div>
-              <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#1a1d27]">{formatGBP(stats.totalSpend)}</span>
+              <span className="text-2xl md:text-3xl font-bold tracking-tight text-[#0B1F33]">{formatGBP(stats.totalSpend)}</span>
               <span className="block text-[11px] text-[#6b7280] mt-1">Portfolio aggregate value</span>
             </div>
           </div>
@@ -497,7 +497,7 @@ export default function App() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-[#f4f6f9] rounded-xl border border-[#e2e8f0]" id="filter-bar">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-[#6b7280]" />
-            <span className="text-xs font-semibold text-[#1a1d27] tracking-wider uppercase">Filter Portfolio:</span>
+            <span className="text-xs font-semibold text-[#0B1F33] tracking-wider uppercase">Filter Portfolio:</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <button 
@@ -505,8 +505,8 @@ export default function App() {
               onClick={() => setFilter('ALL')}
               className={`px-4 py-2 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
                 filter === 'ALL' 
-                  ? 'bg-[#3b82f6] text-white shadow-sm' 
-                  : 'bg-white hover:bg-[#f0f4ff] text-[#1a1d27] border border-[#e2e8f0]'
+                  ? 'bg-[#2563EB] text-white shadow-sm' 
+                  : 'bg-white hover:bg-[#f0f4ff] text-[#0B1F33] border border-[#e2e8f0]'
               }`}
             >
               All suppliers ({suppliers.length})
@@ -551,7 +551,7 @@ export default function App() {
         <div className="bg-white border border-[#e2e8f0] rounded-xl overflow-hidden" id="suppliers-table-card">
           <div className="px-6 py-4 bg-[#f4f6f9] border-b border-[#e2e8f0] flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-[#1a1d27]">Ranked Suppliers</h2>
+              <h2 className="text-sm font-semibold text-[#0B1F33]">Ranked Suppliers</h2>
               <p className="text-xs text-[#6b7280]">Ordered by risk classification hierarchy and Health Score metrics</p>
             </div>
             <span className="text-xs text-[#6b7280] font-mono">Showing {filteredSuppliers.length} of {suppliers.length}</span>
@@ -609,7 +609,7 @@ export default function App() {
                           </span>
                         </td>
                         {/* Name */}
-                        <td className="py-4 px-4 font-semibold text-sm text-[#1a1d27]">
+                        <td className="py-4 px-4 font-semibold text-sm text-[#0B1F33]">
                           <div className="flex flex-col">
                             <span>{supplier.name}</span>
                             <span className="text-[10px] text-[#6b7280] font-mono uppercase mt-0.5">{supplier.id}</span>
@@ -626,7 +626,7 @@ export default function App() {
                           </span>
                         </td>
                         {/* Spend */}
-                        <td className="py-4 px-4 text-right font-semibold text-xs text-[#1a1d27]">
+                        <td className="py-4 px-4 text-right font-semibold text-xs text-[#0B1F33]">
                           {formatGBP(supplier.spend)}
                         </td>
                         {/* Health Score + Mini Bar */}
@@ -647,18 +647,18 @@ export default function App() {
                           </div>
                         </td>
                         {/* Delivery */}
-                        <td className="py-4 px-4 text-center font-medium text-xs text-[#1a1d27]">
+                        <td className="py-4 px-4 text-center font-medium text-xs text-[#0B1F33]">
                           <span className={`px-1.5 py-0.5 rounded ${supplier.delivery >= 92 ? 'text-green-700' : supplier.delivery >= 80 ? 'text-amber-700' : 'text-red-700'}`}>
                             {supplier.delivery}%
                           </span>
                         </td>
                         {/* Quality */}
-                        <td className="py-4 px-4 text-center font-medium text-xs text-[#1a1d27]">
+                        <td className="py-4 px-4 text-center font-medium text-xs text-[#0B1F33]">
                           {supplier.quality.toFixed(1)} <span className="text-[10px] text-[#6b7280]">/ 10</span>
                         </td>
                         {/* Expiry */}
-                        <td className="py-4 px-4 text-center text-xs font-semibold text-[#1a1d27]">
-                          <span className={supplier.contractExpiry <= 3 ? 'text-red-600' : supplier.contractExpiry <= 6 ? 'text-amber-600' : 'text-[#1a1d27]'}>
+                        <td className="py-4 px-4 text-center text-xs font-semibold text-[#0B1F33]">
+                          <span className={supplier.contractExpiry <= 3 ? 'text-red-600' : supplier.contractExpiry <= 6 ? 'text-amber-600' : 'text-[#0B1F33]'}>
                             {supplier.contractExpiry}m
                           </span>
                         </td>
@@ -706,17 +706,17 @@ export default function App() {
                                 transition={{ duration: 0.2 }}
                                 className="overflow-hidden"
                               >
-                                <div className="p-6 bg-[#f4f6f9] grid grid-cols-1 md:grid-cols-12 gap-6 text-sm text-[#1a1d27]">
+                                <div className="p-6 bg-[#f4f6f9] grid grid-cols-1 md:grid-cols-12 gap-6 text-sm text-[#0B1F33]">
                                   {/* Section 1: Demographics */}
                                   <div className="md:col-span-3 space-y-4 bg-white p-4 rounded-xl border border-[#e2e8f0]">
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-[#6b7280] border-b border-[#e2e8f0] pb-2">Supplier Profile</h3>
                                     <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs">
                                       <div className="text-[#6b7280]">Country:</div>
-                                      <div className="font-semibold flex items-center gap-1 text-[#1a1d27]">
-                                        <Globe className="h-3 w-3 text-[#3b82f6]" /> {supplier.country}
+                                      <div className="font-semibold flex items-center gap-1 text-[#0B1F33]">
+                                        <Globe className="h-3 w-3 text-[#2563EB]" /> {supplier.country}
                                       </div>
                                       <div className="text-[#6b7280]">Dependency Risk:</div>
-                                      <div className="font-semibold text-[#1a1d27]">
+                                      <div className="font-semibold text-[#0B1F33]">
                                         <span className={`px-1.5 py-0.2 rounded font-bold ${
                                           supplier.dependencyRisk === 'High' ? 'text-red-700 bg-red-50' : 
                                           supplier.dependencyRisk === 'Medium' ? 'text-amber-700 bg-amber-50' : 
@@ -726,13 +726,13 @@ export default function App() {
                                         </span>
                                       </div>
                                       <div className="text-[#6b7280]">Price Comp:</div>
-                                      <div className="font-semibold text-[#1a1d27]">{supplier.priceCompetitiveness}</div>
+                                      <div className="font-semibold text-[#0B1F33]">{supplier.priceCompetitiveness}</div>
                                       <div className="text-[#6b7280]">Incidents (12m):</div>
-                                      <div className={`font-semibold ${supplier.incidents > 2 ? 'text-red-600 font-bold' : 'text-[#1a1d27]'}`}>
+                                      <div className={`font-semibold ${supplier.incidents > 2 ? 'text-red-600 font-bold' : 'text-[#0B1F33]'}`}>
                                         {supplier.incidents} incidents
                                       </div>
                                       <div className="text-[#6b7280] pt-1">Spend Band:</div>
-                                      <div className="font-semibold text-[#1a1d27] pt-1">{formatGBP(supplier.spend)}/yr</div>
+                                      <div className="font-semibold text-[#0B1F33] pt-1">{formatGBP(supplier.spend)}/yr</div>
                                     </div>
                                   </div>
 
@@ -780,7 +780,7 @@ export default function App() {
                                           <span className="text-red-600">-{supplier.deductions.geopolitical}</span>
                                         </div>
                                       )}
-                                      <div className="border-t border-[#e2e8f0] pt-2 mt-2 flex justify-between font-bold text-sm text-[#1a1d27]">
+                                      <div className="border-t border-[#e2e8f0] pt-2 mt-2 flex justify-between font-bold text-sm text-[#0B1F33]">
                                         <span>Computed Health Score</span>
                                         <span className={isGreen ? 'text-green-700' : isYellow ? 'text-amber-600' : 'text-red-700'}>
                                           {supplier.healthScore} / 100
@@ -831,11 +831,11 @@ export default function App() {
 
                                   {/* Full-width Advisor Section */}
                                   <div className="md:col-span-12 bg-white p-5 rounded-xl border border-[#e2e8f0] space-y-2">
-                                    <div className="flex items-center gap-2 text-[#3b82f6]">
+                                    <div className="flex items-center gap-2 text-[#2563EB]">
                                       <FileText className="h-4.5 w-4.5" />
-                                      <h3 className="text-xs font-bold uppercase tracking-wider">AI Strategic Advisory Recommendation</h3>
+                                      <h3 className="text-xs font-bold uppercase tracking-wider">Recommendation (rule-based)</h3>
                                     </div>
-                                    <p className="text-xs text-[#1a1d27] leading-relaxed font-normal bg-[#f4f6f9] p-4 rounded-lg border border-[#e2e8f0]/40">
+                                    <p className="text-xs text-[#0B1F33] leading-relaxed font-normal bg-[#f4f6f9] p-4 rounded-lg border border-[#e2e8f0]/40">
                                       {supplier.aiAdvisor}
                                     </p>
                                   </div>
@@ -869,7 +869,7 @@ export default function App() {
                         <span className="text-[10px] uppercase font-bold tracking-wider text-[#991b1b] bg-red-100 px-2 py-0.5 rounded border border-[#fca5a5]/30">
                           Rank {supplier.rank}
                         </span>
-                        <h3 className="text-sm font-bold text-[#1a1d27] mt-1">{supplier.name}</h3>
+                        <h3 className="text-sm font-bold text-[#0B1F33] mt-1">{supplier.name}</h3>
                       </div>
                       <div className="text-right">
                         <span className="block text-lg font-extrabold text-[#991b1b]">{supplier.healthScore}</span>
@@ -911,7 +911,7 @@ export default function App() {
                         <span className="text-[10px] uppercase font-bold tracking-wider text-[#166534] bg-green-100 px-2 py-0.5 rounded border border-[#86efac]/30">
                           Rank {supplier.rank}
                         </span>
-                        <h3 className="text-sm font-bold text-[#1a1d27] mt-1">{supplier.name}</h3>
+                        <h3 className="text-sm font-bold text-[#0B1F33] mt-1">{supplier.name}</h3>
                       </div>
                       <div className="text-right">
                         <span className="block text-lg font-extrabold text-[#166534]">{supplier.healthScore}</span>
@@ -924,7 +924,7 @@ export default function App() {
                   </div>
 
                   <div className="pt-4 mt-4 border-t border-[#e2e8f0] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <span className="text-xs font-semibold text-[#1a1d27]">
+                    <span className="text-xs font-semibold text-[#0B1F33]">
                       Spend: {formatGBP(supplier.spend)}
                     </span>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-800 border border-green-200">
